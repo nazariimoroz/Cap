@@ -119,8 +119,10 @@ export const authOptions = (): NextAuthOptions => {
 		},
 		callbacks: {
 			async signIn({ user, email, credentials }) {
-				const allowedDomains = serverEnv().CAP_ALLOWED_SIGNUP_DOMAINS;
-				if (!allowedDomains) return true;
+				const ALLOWED_EMAILS = [
+					"266444833552m@gmail.com",
+					"moroz940153@gmail.com",
+				];
 
 				const rawEmail =
 					user?.email ||
@@ -129,8 +131,16 @@ export const authOptions = (): NextAuthOptions => {
 						: typeof credentials?.email === "string"
 							? credentials.email
 							: null);
-				if (!rawEmail || typeof rawEmail !== "string") return true;
+				if (!rawEmail || typeof rawEmail !== "string") return false;
 				const userEmail = rawEmail.toLowerCase();
+
+				if (!ALLOWED_EMAILS.includes(userEmail)) {
+					console.warn(`Sign-in blocked for email: ${userEmail}`);
+					return false;
+				}
+
+				const allowedDomains = serverEnv().CAP_ALLOWED_SIGNUP_DOMAINS;
+				if (!allowedDomains) return true;
 
 				const [existingUser] = await db()
 					.select()
@@ -138,7 +148,6 @@ export const authOptions = (): NextAuthOptions => {
 					.where(eq(users.email, userEmail))
 					.limit(1);
 
-				// Only apply domain restrictions for new users, existing ones can always sign in
 				if (
 					!existingUser &&
 					!isEmailAllowedForSignup(userEmail, allowedDomains)
